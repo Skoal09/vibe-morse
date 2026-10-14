@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW Morse Transceiver & Trainer | 摩斯密碼收發與訓練工作站</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-panel: #0b1120;
+            --border-color: #334155;
+            --accent-cyan: #06b6d4;
+            --accent-cyan-glow: rgba(6, 182, 212, 0.5);
+            --accent-amber: #f59e0b;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 16px 24px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .tx-led {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: #1e293b;
+            border: 2px solid #475569;
+            transition: background-color 0.03s, box-shadow 0.03s;
+        }
+
+        .tx-led.active {
+            background-color: var(--accent-cyan);
+            border-color: #cffafe;
+            box-shadow: 0 0 16px var(--accent-cyan), 0 0 30px var(--accent-cyan-glow);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+        }
+
+        .status-badge {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 960px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Controls */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .val-display {
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--bg-panel);
+            border-radius: 4px;
+            outline: none;
+            border: 1px solid var(--border-color);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-cyan-glow);
+        }
+
+        .qrn-box {
+            background: var(--bg-panel);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* S-Meter */
+        .s-meter-box {
+            background: var(--bg-panel);
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .s-meter-scale {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .s-meter-scale .s-high {
+            color: var(--accent-amber);
+        }
+
+        .s-meter-bar-bg {
+            width: 100%;
+            height: 14px;
+            background: #050811;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #1e293b;
+            position: relative;
+        }
+
+        .s-meter-bar-fill {
+            height: 100%;
+            width: 5%;
+            background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-green) 65%, var(--accent-amber) 85%, var(--accent-red) 100%);
+            transition: width 0.06s ease-out;
+        }
+
+        /* Canvas Timing Tape */
+        .tape-wrapper {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        canvas#timingTape {
+            width: 100%;
+            height: 90px;
+            background: #050811;
+            border-radius: 4px;
+            display: block;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            background: var(--bg-panel);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            border-color: #475569;
+        }
+
+        .tab-btn.active {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .tab-panel {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        /* Inputs & Displays */
+        textarea, input[type="text"] {
+            width: 100%;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 6px;
+            outline: none;
+            resize: vertical;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .morse-output-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            letter-spacing: 3px;
+            min-height: 76px;
+            color: var(--accent-cyan);
+            word-break: break-all;
+            line-height: 1.6;
+        }
+
+        .char-span {
+            display: inline-block;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        .char-span.playing {
+            background: var(--accent-amber);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: #000;
+            border-color: var(--accent-cyan);
+        }
+
+        .btn-primary:hover {
+            background: #22d3ee;
+            color: #000;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        /* Shortcuts */
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: 8px;
+        }
+
+        .shortcut-btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+        }
+
+        .shortcut-btn:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        .shortcut-code {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+        }
+
+        .shortcut-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        /* Straight Key Pad */
+        .straight-key-pad {
+            height: 150px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.05s;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.05), 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .straight-key-pad:active, .straight-key-pad.pressed {
+            background: rgba(6, 182, 212, 0.18);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan-glow), inset 0 0 15px var(--accent-cyan-glow);
+            transform: translateY(2px);
+        }
+
+        .key-title {
+            font-family: var(--font-mono);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .key-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* RX Trainer */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-family: var(--font-mono);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .rx-feedback {
+            padding: 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Reference Matrix */
+        .dict-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+            gap: 8px;
+        }
+
+        .dict-item {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.12s;
+            user-select: none;
+        }
+
+        .dict-item:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .dict-char {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text-main);
+        }
+
+        .dict-code {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            margin-top: 2px;
+        }
+
+        .label-muted {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Top Header -->
+    <header>
+        <div class="brand">
+            <div id="txLed" class="tx-led" title="CW 訊號指示燈"></div>
+            <h1>CW MORSE TRANSCEIVER &amp; TRAINER</h1>
+        </div>
+        <div class="status-badge" id="timingBadge">PARIS Standard | Dit: 80 ms</div>
+    </header>
+
+    <!-- Main Workbench -->
+    <div class="main-grid">
+        <!-- Left Column: Audio Controls & Signal Visualization -->
+        <div class="card">
+            <div class="card-title">
+                <span>音訊與通道環境控制 (Audio &amp; Channel)</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>發報速度 (Speed)</span>
+                    <span class="val-display" id="wpmVal">15 WPM</span>
+                </div>
+                <input type="range" id="wpmSlider" min="5" max="40" value="15">
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>音調頻率 (Sidetone Pitch)</span>
+                    <span class="val-display" id="pitchVal">700 Hz</span>
+                </div>
+                <input type="range" id="pitchSlider" min="400" max="1000" step="10" value="700">
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>主音量 (AF Gain)</span>
+                    <span class="val-display" id="volVal">75%</span>
+                </div>
+                <input type="range" id="volSlider" min="0" max="100" value="75">
+            </div>
+
+            <!-- QRN Static Noise Generator -->
+            <div class="qrn-box">
+                <div class="control-header" style="align-items: center;">
+                    <span>QRN 天電靜電雜訊模擬</span>
+                    <button id="qrnToggleBtn" class="btn" style="padding: 4px 12px; font-size: 0.8rem;">OFF</button>
+                </div>
+                <div class="control-header">
+                    <span class="label-muted">雜訊強度 (Noise Floor)</span>
+                    <span class="val-display" id="qrnVal">20%</span>
+                </div>
+                <input type="range" id="qrnSlider" min="0" max="60" value="20">
+            </div>
+
+            <!-- S-Meter -->
+            <div class="s-meter-box">
+                <div class="control-header" style="margin-bottom: 6px;">
+                    <span class="label-muted">S-METER (訊號強度表)</span>
+                    <span class="val-display" id="sMeterText">S0</span>
+                </div>
+                <div class="s-meter-scale">
+                    <span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span class="s-high">+20dB</span>
+                </div>
+                <div class="s-meter-bar-bg">
+                    <div id="sMeterFill" class="s-meter-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Canvas Timing Tape -->
+            <div class="tape-wrapper">
+                <div class="control-header">
+                    <span class="label-muted">即時訊號時間軸紙帶 (CW Timing Tape)</span>
+                    <span class="label-muted" id="keyDurationLabel">Δt: 0 ms</span>
+                </div>
+                <canvas id="timingTape" width="340" height="90"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Modes -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-encoder">1. 文字編碼發射 (TX Encoder)</button>
+                <button class="tab-btn" data-tab="tab-keyer">2. 手動電鍵拍發 (Straight Key)</button>
+                <button class="tab-btn" data-tab="tab-trainer">3. 聽力抄收測驗 (RX Trainer)</button>
+            </div>
+
+            <!-- Mode 1: Encoder & Q-Code Shortcuts -->
+            <div id="tab-encoder" class="tab-panel active">
+                <div class="control-group">
+                    <label class="label-muted" for="txInput">輸入英數文字或雙向輸入摩斯密碼 (以空白分隔字元，/ 分隔單字)：</label>
+                    <textarea id="txInput" rows="3" placeholder="輸入英文例如：CQ CQ DE BV2A K">CQ CQ DE BV2A K</textarea>
+                </div>
+
+                <div class="control-group">
+                    <span class="label-muted">轉換結果與發射同步追蹤：</span>
+                    <div id="morsePreview" class="morse-output-box"></div>
+                </div>
+
+                <div class="btn-row">
+                    <button id="playTxBtn" class="btn btn-primary">▶ 發射訊號 (Transmit)</button>
+                    <button id="stopTxBtn" class="btn btn-danger">■ 停止 (Stop)</button>
+                    <button id="clearTxBtn" class="btn">清除內容</button>
+                </div>
+
+                <div class="control-group" style="margin-top: 8px;">
+                    <span class="label-muted">無線電常用縮寫與 Q 簡語快捷發射 (點擊載入並發射)：</span>
+                    <div class="shortcut-grid" id="shortcutContainer"></div>
+                </div>
+            </div>
+
+            <!-- Mode 2: Straight Key Decoder -->
+            <div id="tab-keyer" class="tab-panel">
+                <div id="straightKeyPad" class="straight-key-pad">
+                    <div class="key-title">[ 按住滑鼠左鍵 或 空白鍵 SPACE 拍發 ]</div>
+                    <div class="key-sub">短按 (&lt; 2 Dit) = 點 (.) ｜ 長按 (&ge; 2 Dit) = 劃 (-)</div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span class="label-muted">當前字元點劃緩衝區 (Current Buffer)：</span>
+                        <span class="label-muted" id="thresholdHint">判定閾值：160 ms</span>
+                    </div>
+                    <div id="keyerBufferBox" class="morse-output-box" style="min-height: 54px; color: var(--accent-amber);"></div>
+                </div>
+
+                <div class="control-group">
+                    <span class="label-muted">即時解碼文字輸出 (Decoded Text)：</span>
+                    <div id="keyerDecodedBox" class="morse-output-box" style="min-height: 76px; color: var(--text-main);"></div>
+                </div>
+
+                <div class="btn-row">
+                    <button id="clearKeyerBtn" class="btn">清除解碼紀錄</button>
+                </div>
+            </div>
+
+            <!-- Mode 3: RX Trainer -->
+            <div id="tab-trainer" class="tab-panel">
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-num" id="rxAccuracy">0%</div>
+                        <div class="stat-label">正確率 (Accuracy)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="rxScore">0 / 0</div>
+                        <div class="stat-label">答對 / 總題數</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="rxStreak">0</div>
+                        <div class="stat-label">連續答對 (Streak)</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <span class="label-muted">選擇題庫難度：</span>
+                    <div class="btn-row">
+                        <label class="btn" style="cursor:pointer;">
+                            <input type="radio" name="rxLevel" value="char" checked> 單一字元 (A-Z, 0-9)
+                        </label>
+                        <label class="btn" style="cursor:pointer;">
+                            <input type="radio" name="rxLevel" value="qcode"> 常用簡語 (Q-Codes / 縮寫)
+                        </label>
+                        <label class="btn" style="cursor:pointer;">
+                            <input type="radio" name="rxLevel" value="callsign"> 業餘無線電呼號 (Callsigns)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <button id="rxPlayBtn" class="btn btn-primary">🔊 播放題目音訊 (Play Question)</button>
+                    <button id="rxRepeatBtn" class="btn">↻ 重聽一次 (Repeat)</button>
+                    <button id="rxSkipBtn" class="btn">跳過 / 看解答</button>
+                </div>
+
+                <div class="control-group">
+                    <span class="label-muted">輸入你聽到的字元或呼號 (按 Enter 送出)：</span>
+                    <div class="btn-row" style="flex-wrap: nowrap;">
+                        <input type="text" id="rxAnswerInput" placeholder="請先點擊「播放題目音訊」..." autocomplete="off">
+                        <button id="rxSubmitBtn" class="btn btn-primary" style="white-space: nowrap;">送出答案</button>
+                    </div>
+                </div>
+
+                <div id="rxFeedbackBox" class="rx-feedback">
+                    提示：可於左側開啟「QRN 靜電雜訊模擬」提升抄收訓練真實度。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Reference Matrix -->
+    <div class="card">
+        <div class="card-title">
+            <span>國際摩斯密碼速查表 (點擊任意字元可直接試聽訊號)</span>
+            <span class="label-muted">ITU-R M.1677-1 Standard</span>
+        </div>
+        <div id="dictGrid" class="dict-grid"></div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. 國際摩斯密碼字典與常用簡語資料
+    // ==========================================
+    const MORSE_DICT = {
+        'A': '.-',    'B': '-...',  'C': '-.-.',  'D': '-..',   'E': '.',     'F': '..-.',
+        'G': '--.',   'H': '....',  'I': '..',    'J': '.---',  'K': '-.-',   'L': '.-..',
+        'M': '--',    'N': '-.',    'O': '---',   'P': '.--.',  'Q': '--.-',  'R': '.-.',
+        'S': '...',   'T': '-',     'U': '..-',   'V': '...-',  'W': '.--',   'X': '-..-',
+        'Y': '-.--',  'Z': '--..',
+        '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-',
+        '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
+        '.': '.-.-.-', ',': '--..--', '?': '..--..', '/': '-..-.', '=': '-...-', '+': '.-.-.'
+    };
+
+    const REVERSE_DICT = {};
+    for (const [char, code] of Object.entries(MORSE_DICT)) {
+        REVERSE_DICT[code] = char;
+    }
+
+    const Q_SHORTCUTS = [
+        { code: 'CQ CQ DE BX2AA K', label: 'CQ 呼叫範例' },
+        { code: '73', label: '73 最佳祝福' },
+        { code: 'QTH', label: 'QTH 我的位置' },
+        { code: 'QSL', label: 'QSL 確認收妥' },
+        { code: 'QRM', label: 'QRM 人為干擾' },
+        { code: 'QRN', label: 'QRN 天電干擾' },
+        { code: 'QRZ?', label: 'QRZ? 誰在呼叫我' },
+        { code: 'RST 599', label: 'RST 599 訊號極佳' },
+        { code: 'SOS', label: 'SOS 國際求救訊號' }
+    ];
+
+    const TRAINER_POOLS = {
+        char: Object.keys(MORSE_DICT).slice(0, 36),
+        qcode: ['CQ', '73', 'QTH', 'QSL', 'QRM', 'QRN', 'QRZ', 'QSY', 'QRP', 'RST', '599', 'TU', 'DE', 'SOS', 'AGN'],
+        callsign: ['BV2A', 'BM2AAV', 'BX4AA', 'BV5OO', 'BU2EL', 'JA1AAA', 'W1AW', 'VK3XYZ', 'K6ABC', 'JH1NBN']
+    };
+
+    // ==========================================
+    // 2. 全域狀態與參數
+    // ==========================================
+    let wpm = 15;
+    let pitch = 700;
+    let masterVol = 0.75;
+    let qrnActive = false;
+    let qrnLevel = 0.20;
+
+    function getDitMs() {
+        return 1200 / wpm;
+    }
+
+    // ==========================================
+    // 3. Web Audio API 音訊合成引擎 (含防爆音與 QRN)
+    // ==========================================
+    let audioCtx = null;
+    let cwOsc = null;
+    let cwGain = null;
+    let qrnSource = null;
+    let qrnGain = null;
+    let isToneActive = false;
+
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // CW 訊號源
+            cwOsc = audioCtx.createOscillator();
+            cwGain = audioCtx.createGain();
+            cwOsc.type = 'sine';
+            cwOsc.frequency.value = pitch;
+            cwGain.gain.value = 0;
+            cwOsc.connect(cwGain);
+            cwGain.connect(audioCtx.destination);
+            cwOsc.start();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function startCwTone() {
+        initAudio();
+        if (isToneActive) return;
+        isToneActive = true;
+        const now = audioCtx.currentTime;
+        cwOsc.frequency.setValueAtTime(pitch, now);
+        cwGain.gain.cancelScheduledValues(now);
+        cwGain.gain.setValueAtTime(cwGain.gain.value, now);
+        // 5ms 防爆音平滑爬升 (Ramp)
+        cwGain.gain.linearRampToValueAtTime(masterVol, now + 0.005);
+        document.getElementById('txLed').classList.add('active');
+    }
+
+    function stopCwTone() {
+        if (!audioCtx || !isToneActive) return;
+        isToneActive = false;
+        const now = audioCtx.currentTime;
+        cwGain.gain.cancelScheduledValues(now);
+        cwGain.gain.setValueAtTime(cwGain.gain.value, now);
+        // 5ms 防爆音平滑下降
+        cwGain.gain.linearRampToValueAtTime(0.0001, now + 0.005);
+        document.getElementById('txLed').classList.remove('active');
+    }
+
+    function toggleQrnNoise(forceState) {
+        initAudio();
+        qrnActive = (forceState !== undefined) ? forceState : !qrnActive;
+        const btn = document.getElementById('qrnToggleBtn');
+
+        if (qrnActive) {
+            const bufferSize = audioCtx.sampleRate * 3;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            qrnSource = audioCtx.createBufferSource();
+            qrnSource.buffer = buffer;
+            qrnSource.loop = true;
+
+            // 使用帶通濾波器模擬無線電窄頻底噪
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 950;
+            filter.Q.value = 1.2;
+
+            qrnGain = audioCtx.createGain();
+            qrnGain.gain.value = qrnLevel * masterVol * 0.4;
+
+            qrnSource.connect(filter);
+            filter.connect(qrnGain);
+            qrnGain.connect(audioCtx.destination);
+            qrnSource.start();
+
+            btn.textContent = 'ON';
+            btn.classList.add('btn-primary');
+        } else {
+            if (qrnSource) {
+                try { qrnSource.stop(); } catch (e) {}
+                qrnSource.disconnect();
+                qrnSource = null;
+            }
+            btn.textContent = 'OFF';
+            btn.classList.remove('btn-primary');
+        }
+    }
+
+    function updateQrnGain() {
+        if (qrnGain && audioCtx) {
+            qrnGain.gain.setValueAtTime(qrnLevel * masterVol * 0.4, audioCtx.currentTime);
+        }
+    }
+
+    // ==========================================
+    // 4. Canvas 時間軸紙帶與 S-Meter 動畫引擎
+    // ==========================================
+    const canvas = document.getElementById('timingTape');
+    const ctx = canvas.getContext('2d');
+    const sMeterFill = document.getElementById('sMeterFill');
+    const sMeterText = document.getElementById('sMeterText');
+
+    function renderLoop() {
+        // 1. 將現有畫布向左平移 2px
+        const imgData = ctx.getImageData(2, 0, canvas.width - 2, canvas.height);
+        ctx.putImageData(imgData, 0, 0);
+
+        // 2. 清除最右側 2px
+        ctx.fillStyle = '#050811';
+        ctx.fillRect(canvas.width - 2, 0, 2, canvas.height);
+
+        // 3. 繪製中線與雜訊/訊號軌跡
+        const midY = canvas.height / 2;
+        if (qrnActive && !isToneActive) {
+            const noiseAmp = (Math.random() - 0.5) * qrnLevel * 38;
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(canvas.width - 2, midY + noiseAmp, 2, 2);
+        } else {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(canvas.width - 2, midY, 2, 1);
+        }
+
+        if (isToneActive) {
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(canvas.width - 2, midY - 18, 2, 36);
+        }
+
+        // 4. 更新 S-Meter
+        if (isToneActive) {
+            const jitter = (Math.random() * 4) - 2;
+            sMeterFill.style.width = `${Math.min(100, 88 + jitter)}%`;
+            sMeterText.textContent = 'S9+20dB';
+        } else if (qrnActive) {
+            const sLevel = Math.min(7, Math.floor((qrnLevel / 0.6) * 6) + 1);
+            const widthPct = (sLevel / 11) * 100 + (Math.random() * 6 - 3);
+            sMeterFill.style.width = `${Math.max(4, widthPct)}%`;
+            sMeterText.textContent = `S${sLevel}`;
+        } else {
+            sMeterFill.style.width = '2%';
+            sMeterText.textContent = 'S0';
+        }
+
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    // ==========================================
+    // 5. 模式一：文字編碼與自動播放佇列
+    // ==========================================
+    const txInput = document.getElementById('txInput');
+    const morsePreview = document.getElementById('morsePreview');
+    let txTimeouts = [];
+    let isTransmitting = false;
+
+    function parseInputToTokens(raw) {
+        const trimmed = raw.trim().toUpperCase();
+        if (!trimmed) return [];
+
+        // 檢測是否為純摩斯密碼輸入 (僅含 . - / 與空白)
+        const isMorseInput = /^[.\-\/\s]+$/.test(trimmed);
+        const tokens = [];
+
+        if (isMorseInput) {
+            const words = trimmed.split(/\s*\/\s*|\s{2,}/);
+            words.forEach((w, wIdx) => {
+                const codes = w.trim().split(/\s+/);
+                codes.forEach(code => {
+                    if (REVERSE_DICT[code]) {
+                        tokens.push({ char: REVERSE_DICT[code], code: code });
+                    }
+                });
+                if (wIdx < words.length - 1) {
+                    tokens.push({ char: ' ', code: '/' });
+                }
+            });
+        } else {
+            for (const ch of trimmed) {
+                if (ch === ' ' || ch === '\n') {
+                    if (tokens.length > 0 && tokens[tokens.length - 1].char !== ' ') {
+                        tokens.push({ char: ' ', code: '/' });
+                    }
+                } else if (MORSE_DICT[ch]) {
+                    tokens.push({ char: ch, code: MORSE_DICT[ch] });
+                }
+            }
+        }
+        return tokens;
+    }
+
+    function updateEncoderPreview() {
+        const tokens = parseInputToTokens(txInput.value);
+        morsePreview.innerHTML = '';
+        tokens.forEach((t, idx) => {
+            const span = document.createElement('span');
+            span.className = 'char-span';
+            span.id = `tx-token-${idx}`;
+            span.textContent = t.code + ' ';
+            span.title = `字元: ${t.char}`;
+            morsePreview.appendChild(span);
+        });
+    }
+
+    function stopTransmission() {
+        txTimeouts.forEach(id => clearTimeout(id));
+        txTimeouts = [];
+        isTransmitting = false;
+        stopCwTone();
+        document.querySelectorAll('.char-span.playing').forEach(el => el.classList.remove('playing'));
+    }
+
+    function playTokensSequence(tokens, highlightDom = true) {
+        stopTransmission();
+        if (tokens.length === 0) return;
+        initAudio();
+        isTransmitting = true;
+
+        const dit = getDitMs();
+        let cursorMs = 30;
+
+        tokens.forEach((token, idx) => {
+            if (token.char === ' ') {
+                cursorMs += dit * 4; // 加上前一個字元後的 3 dit 共 7 dit
+                return;
+            }
+
+            const startCharMs = cursorMs;
+            txTimeouts.push(setTimeout(() => {
+                if (highlightDom) {
+                    document.querySelectorAll('.char-span.playing').forEach(el => el.classList.remove('playing'));
+                    const el = document.getElementById(`tx-token-${idx}`);
+                    if (el) el.classList.add('playing');
+                }
+            }, startCharMs));
+
+            const symbols = token.code.split('');
+            symbols.forEach((sym, sIdx) => {
+                const dur = (sym === '.') ? dit : dit * 3;
+                const onTime = cursorMs;
+                const offTime = cursorMs + dur;
+
+                txTimeouts.push(setTimeout(() => startCwTone(), onTime));
+                txTimeouts.push(setTimeout(() => stopCwTone(), offTime));
+
+                cursorMs = offTime + (sIdx < symbols.length - 1 ? dit : dit * 3);
+            });
+        });
+
+        txTimeouts.push(setTimeout(() => {
+            stopTransmission();
+        }, cursorMs + 50));
+    }
+
+    txInput.addEventListener('input', updateEncoderPreview);
+    document.getElementById('playTxBtn').addEventListener('click', () => {
+        const tokens = parseInputToTokens(txInput.value);
+        playTokensSequence(tokens, true);
+    });
+    document.getElementById('stopTxBtn').addEventListener('click', stopTransmission);
+    document.getElementById('clearTxBtn').addEventListener('click', () => {
+        stopTransmission();
+        txInput.value = '';
+        updateEncoderPreview();
+    });
+
+    // 初始化快捷鍵
+    const shortcutContainer = document.getElementById('shortcutContainer');
+    Q_SHORTCUTS.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'shortcut-btn';
+        btn.innerHTML = `<span class="shortcut-code">${item.code}</span><span class="shortcut-desc">${item.label}</span>`;
+        btn.addEventListener('click', () => {
+            txInput.value = item.code;
+            updateEncoderPreview();
+            playTokensSequence(parseInputToTokens(item.code), true);
+        });
+        shortcutContainer.appendChild(btn);
+    });
+
+    // ==========================================
+    // 6. 模式二：手動電鍵拍發解碼器 (Straight Key)
+    // ==========================================
+    const straightKeyPad = document.getElementById('straightKeyPad');
+    const keyerBufferBox = document.getElementById('keyerBufferBox');
+    const keyerDecodedBox = document.getElementById('keyerDecodedBox');
+    const keyDurationLabel = document.getElementById('keyDurationLabel');
+
+    let keyDownTimestamp = 0;
+    let currentSymbolBuffer = '';
+    let charPauseTimer = null;
+    let wordPauseTimer = null;
+    let isKeyDown = false;
+
+    function handleKeyerDown() {
+        if (isKeyDown) return;
+        isKeyDown = true;
+        clearTimeout(charPauseTimer);
+        clearTimeout(wordPauseTimer);
+        keyDownTimestamp = performance.now();
+        straightKeyPad.classList.add('pressed');
+        startCwTone();
+    }
+
+    function handleKeyerUp() {
+        if (!isKeyDown) return;
+        isKeyDown = false;
+        const duration = Math.round(performance.now() - keyDownTimestamp);
+        straightKeyPad.classList.remove('pressed');
+        stopCwTone();
+
+        keyDurationLabel.textContent = `Δt: ${duration} ms`;
+
+        // 過濾極短按鍵彈跳 (< 20ms)
+        if (duration < 20) return;
+
+        const dit = getDitMs();
+        const symbol = (duration < dit * 2) ? '.' : '-';
+        currentSymbolBuffer += symbol;
+        keyerBufferBox.textContent = currentSymbolBuffer;
+
+        // 超過 2.4 倍 Dit 無輸入則結算為一個英文字母
+        charPauseTimer = setTimeout(() => {
+            if (currentSymbolBuffer) {
+                const decodedChar = REVERSE_DICT[currentSymbolBuffer] || '□';
+                keyerDecodedBox.textContent += decodedChar;
+                currentSymbolBuffer = '';
+                keyerBufferBox.textContent = '';
+            }
+        }, dit * 2.4);
+
+        // 超過 6 倍 Dit 無輸入則補上單字空白
+        wordPauseTimer = setTimeout(() => {
+            if (keyerDecodedBox.textContent && !keyerDecodedBox.textContent.endsWith(' ')) {
+                keyerDecodedBox.textContent += ' ';
+            }
+        }, dit * 6.0);
+    }
+
+    straightKeyPad.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handleKeyerDown();
+    });
+    window.addEventListener('mouseup', () => {
+        if (isKeyDown) handleKeyerUp();
+    });
+    straightKeyPad.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleKeyerDown();
+    });
+    straightKeyPad.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        handleKeyerUp();
+    });
+
+    // 支援鍵盤空白鍵拍發（防止頁面捲動）
+    window.addEventListener('keydown', (e) => {
+        const activeTag = document.activeElement.tagName;
+        if (e.code === 'Space' && activeTag !== 'TEXTAREA' && activeTag !== 'INPUT') {
+            e.preventDefault();
+            if (!e.repeat) handleKeyerDown();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const activeTag = document.activeElement.tagName;
+        if (e.code === 'Space' && activeTag !== 'TEXTAREA' && activeTag !== 'INPUT') {
+            e.preventDefault();
+            handleKeyerUp();
+        }
+    });
+
+    document.getElementById('clearKeyerBtn').addEventListener('click', () => {
+        currentSymbolBuffer = '';
+        keyerBufferBox.textContent = '';
+        keyerDecodedBox.textContent = '';
+    });
+
+    // ==========================================
+    // 7. 模式三：聽力抄收測驗 (RX Trainer)
+    // ==========================================
+    let currentQuestion = '';
+    let totalAttempts = 0;
+    let correctCount = 0;
+    let currentStreak = 0;
+
+    const rxAnswerInput = document.getElementById('rxAnswerInput');
+    const rxFeedbackBox = document.getElementById('rxFeedbackBox');
+
+    function getSelectedPool() {
+        const checked = document.querySelector('input[name="rxLevel"]:checked').value;
+        return TRAINER_POOLS[checked];
+    }
+
+    function updateTrainerStats() {
+        const acc = totalAttempts === 0 ? 0 : Math.round((correctCount / totalAttempts) * 100);
+        document.getElementById('rxAccuracy').textContent = `${acc}%`;
+        document.getElementById('rxScore').textContent = `${correctCount} / ${totalAttempts}`;
+        document.getElementById('rxStreak').textContent = `${currentStreak}`;
+    }
+
+    function generateAndPlayQuestion() {
+        const pool = getSelectedPool();
+        currentQuestion = pool[Math.floor(Math.random() * pool.length)];
+        rxAnswerInput.value = '';
+        rxAnswerInput.focus();
+        rxFeedbackBox.style.color = 'var(--text-muted)';
+        rxFeedbackBox.textContent = '訊號發射中，請仔細聆聽並輸入答案...';
+        playTokensSequence(parseInputToTokens(currentQuestion), false);
+    }
+
+    function checkRxAnswer() {
+        if (!currentQuestion) {
+            rxFeedbackBox.textContent = '請先點擊「播放題目音訊」開始測驗！';
+            return;
+        }
+        const userAns = rxAnswerInput.value.trim().toUpperCase();
+        if (!userAns) return;
+
+        totalAttempts++;
+        const morseStr = parseInputToTokens(currentQuestion).map(t => t.code).join(' ');
+
+        if (userAns === currentQuestion) {
+            correctCount++;
+            currentStreak++;
+            rxFeedbackBox.style.color = 'var(--accent-green)';
+            rxFeedbackBox.textContent = `✓ 答對了！正確答案：${currentQuestion} (${morseStr})`;
+            currentQuestion = '';
+        } else {
+            currentStreak = 0;
+            rxFeedbackBox.style.color = 'var(--accent-red)';
+            rxFeedbackBox.textContent = `✗ 答錯了（你輸入 ${userAns}）。正確答案：${currentQuestion} (${morseStr})`;
+            currentQuestion = '';
+        }
+        updateTrainerStats();
+    }
+
+    document.getElementById('rxPlayBtn').addEventListener('click', generateAndPlayQuestion);
+    document.getElementById('rxRepeatBtn').addEventListener('click', () => {
+        if (!currentQuestion) {
+            generateAndPlayQuestion();
+        } else {
+            playTokensSequence(parseInputToTokens(currentQuestion), false);
+            rxAnswerInput.focus();
+        }
+    });
+    document.getElementById('rxSkipBtn').addEventListener('click', () => {
+        if (!currentQuestion) return;
+        const morseStr = parseInputToTokens(currentQuestion).map(t => t.code).join(' ');
+        rxFeedbackBox.style.color = 'var(--accent-amber)';
+        rxFeedbackBox.textContent = `解答揭曉：${currentQuestion} (${morseStr})`;
+        currentQuestion = '';
+        currentStreak = 0;
+        updateTrainerStats();
+    });
+    document.getElementById('rxSubmitBtn').addEventListener('click', checkRxAnswer);
+    rxAnswerInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkRxAnswer();
+    });
+
+    // ==========================================
+    // 8. 綁定控制滑桿、頁籤切換與底部字典速查表
+    // ==========================================
+    const wpmSlider = document.getElementById('wpmSlider');
+    const pitchSlider = document.getElementById('pitchSlider');
+    const volSlider = document.getElementById('volSlider');
+    const qrnSlider = document.getElementById('qrnSlider');
+
+    function syncTimingUI() {
+        const dit = Math.round(getDitMs());
+        document.getElementById('wpmVal').textContent = `${wpm} WPM`;
+        document.getElementById('timingBadge').textContent = `PARIS Standard | Dit: ${dit} ms`;
+        document.getElementById('thresholdHint').textContent = `判定閾值：${dit * 2} ms`;
+    }
+
+    wpmSlider.addEventListener('input', (e) => {
+        wpm = parseInt(e.target.value, 10);
+        syncTimingUI();
+    });
+
+    pitchSlider.addEventListener('input', (e) => {
+        pitch = parseInt(e.target.value, 10);
+        document.getElementById('pitchVal').textContent = `${pitch} Hz`;
+        if (cwOsc && audioCtx) {
+            cwOsc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+        }
+    });
+
+    volSlider.addEventListener('input', (e) => {
+        masterVol = parseInt(e.target.value, 10) / 100;
+        document.getElementById('volVal').textContent = `${e.target.value}%`;
+        updateQrnGain();
+    });
+
+    qrnSlider.addEventListener('input', (e) => {
+        qrnLevel = parseInt(e.target.value, 10) / 100;
+        document.getElementById('qrnVal').textContent = `${e.target.value}%`;
+        updateQrnGain();
+    });
+
+    document.getElementById('qrnToggleBtn').addEventListener('click', () => toggleQrnNoise());
+
+    // 頁籤切換
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            stopTransmission();
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.add('active');
+        });
+    });
+
+    // 建立底部速查表
+    const dictGrid = document.getElementById('dictGrid');
+    for (const [char, code] of Object.entries(MORSE_DICT)) {
+        const card = document.createElement('div');
+        card.className = 'dict-item';
+        card.innerHTML = `<div class="dict-char">${char}</div><div class="dict-code">${code}</div>`;
+        card.title = `點擊試聽 ${char} (${code})`;
+        card.addEventListener('click', () => {
+            playTokensSequence([{ char, code }], false);
+        });
+        dictGrid.appendChild(card);
+    }
+
+    // 初始化畫面
+    syncTimingUI();
+    updateEncoderPreview();
+</script>
+</body>
+</html>
